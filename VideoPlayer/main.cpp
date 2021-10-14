@@ -11,12 +11,14 @@ int main()
 
 	Media::Decoder decoder;
 	decoder.OpenFile(&file);
-
-	Media::Streams audios = decoder.GetStream(Media::StreamType::Audio);
+	{
+		Media::Streams audios = decoder.GetStream(Media::StreamType::Audio);
+	}
 	//Media::StreamInfo info = decoder.GetStreamInfo(audios[0]);
 
-	decoder.SetCurrentAudioStream(audios [0]);
-	Media::AudioFrame frame = decoder.GetAudioFrame();
-
+	/*decoder.SetCurrentAudioStream(audios [0]);
+	Media::AudioFrame frame = decoder.GetAudioFrame(50);
+	frame = decoder.GetAudioFrame(5);*/
+	std::cout << "h" << std::endl;
 	return 0;
 }

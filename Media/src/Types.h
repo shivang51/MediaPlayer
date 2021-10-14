@@ -1,6 +1,9 @@
 #pragma once
 
 #include "FFmpeg.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 /**
 * Contains all the type definations, structs and error definations
@@ -40,13 +43,13 @@ namespace Media
     typedef std::shared_ptr<AVStream> Stream;
     typedef std::vector<Stream> Streams;
 
-    typedef std::shared_ptr<AVCodecContext> StreamDecoder;
+    typedef std::unique_ptr<AVCodecContext> StreamDecoder;
 
-    typedef std::shared_ptr<AVPacket*> Packet;
-    typedef std::shared_ptr<AVFrame*> Frame;
+    typedef std::unique_ptr<AVPacket> Packet;
+    typedef std::unique_ptr<AVFrame> Frame;
 
-    typedef std::shared_ptr<SwrContext*> SwrCtx;
-    typedef std::shared_ptr<SwsContext> SwsCtx;
+    typedef SwrContext* SwrCtx;
+    typedef SwsContext* SwsCtx;
 
     typedef AVRational TimeBase;
 }
@@ -97,6 +100,9 @@ namespace Media{
 namespace Media
 {
     StreamDecoder MakeStreamDecoder(AVCodecContext* dec);
+    SwsCtx MakeSwsCtx(SwsContext* ctx);
+    void FrameUnref(const Frame& frame);
+    void PacketUnref(const Packet& frame);
 }
 
 #endif

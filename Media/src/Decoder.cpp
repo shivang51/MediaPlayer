@@ -4,15 +4,14 @@
 
 #pragma warning( disable : 26812 )
 
-Media::StreamDecoder Media::MakeStreamDecoder(AVCodecContext* dec)
-{
-	return StreamDecoder(dec);
-}
-
 Media::Decoder::Decoder()
 {
 	this->terminated = false;
 	av_dict_set(this->mediaOptions.get(), "pixel_format", "rgb24", 0);
+	this->swrCtx = swr_alloc();
+
+	this->latestFrame = std::unique_ptr<AVFrame>(av_frame_alloc());
+	this->latestPacket = std::unique_ptr<AVPacket>(av_packet_alloc());
 }
  
 Media::Decoder::~Decoder()
@@ -25,8 +24,10 @@ void Media::Decoder::TerminateDecoder()
 	if ( !this->terminated )
 	{
 		av_dict_free(this->mediaOptions.get());
-		av_frame_free(this->latestFrame.get());
-		av_packet_free(this->latestPacket.get());
+		auto frame = this->latestFrame.release();
+		av_frame_free(&frame);
+		auto packet = this->latestPacket.release();
+		av_packet_free(&packet);
 		this->CloseFile();
 
 		this->terminated = true;
@@ -42,7 +43,9 @@ Media::Error Media::Decoder::OpenFile(Media::File* file)
 		this->CloseFile(&openedfile);
 	}
 
-	if ( ( err = avformat_open_input(this->fileFormatCtx.get(), file->location.c_str(), NULL, this->mediaOptions.get()) ) < 0 )
+	AVFormatContext* ffCtx = nullptr;
+
+	if ( ( err = avformat_open_input(&ffCtx, file->location.c_str(), NULL, this->mediaOptions.get()) ) < 0 )
 	{
 		if ( err == -2 )
 		{
@@ -57,14 +60,12 @@ Media::Error Media::Decoder::OpenFile(Media::File* file)
 	this->openedfile = *file;
 	this->openedfile.open = true;
 
-	if ( avformat_find_stream_info(*this->fileFormatCtx, 0) < 0 )
+	this->fileFormatCtx = std::unique_ptr<AVFormatContext>(ffCtx);
+
+	if ( avformat_find_stream_info(this->fileFormatCtx.get(), 0) < 0 )
 	{
 		return Error::StreamInfoNotFound;
 	}
-
-	Media::Streams audioStreams = this->GetStream(Media::StreamType::Audio);
-	this->audioDecoder = this->GetStreamDecoder(audioStreams [0]);
-
 
 	return Error::None;
 }
@@ -77,13 +78,18 @@ void Media::Decoder::CloseFile(Media::File* file)
 	}
 	if ( file->open )
 	{
-		avformat_close_input(this->fileFormatCtx.get());
+		auto ffCtx = this->fileFormatCtx.get();
+		avformat_close_input(&ffCtx);
 		file->open = false;
 		file->location = "";
 	}
-	if ( swr_is_initialized(*this->swrCtx) )
+
+	auto audioDecBuffer = this->audioDecoder.release();
+	avcodec_free_context(&audioDecBuffer);
+
+	if ( swr_is_initialized(this->swrCtx) )
 	{
-		swr_free(this->swrCtx.get());
+		swr_free(&this->swrCtx);
 	}
 
 	sws_freeContext(this->swsCtx);
@@ -91,13 +97,13 @@ void Media::Decoder::CloseFile(Media::File* file)
 
 float Media::Decoder::GetCurrentFileDuration()
 {
-	return (float) (*this->fileFormatCtx)->duration / (float) AV_TIME_BASE;
+	return (float) (this->fileFormatCtx)->duration / (float) AV_TIME_BASE;
 }
 
 std::string Media::Decoder::GetBestFileTitle()
 {
 	std::string name;
-	AVDictionaryEntry* entry = av_dict_get(( *this->fileFormatCtx )->metadata, "title", NULL, AV_DICT_IGNORE_SUFFIX);
+	AVDictionaryEntry* entry = av_dict_get(( this->fileFormatCtx )->metadata, "title", NULL, AV_DICT_IGNORE_SUFFIX);
 	if ( entry )
 	{
 		name = entry->value;
@@ -110,7 +116,7 @@ std::string Media::Decoder::GetBestFileTitle()
 	}
 }
 
-Media::StreamType Media::Decoder::GetStreamType(Media::Stream stream)
+Media::StreamType Media::Decoder::GetStreamType(Media::Stream& stream)
 {
 	if ( stream->codecpar->codec_type == (AVMediaType) Media::StreamType::Audio )
 	{
@@ -134,9 +140,9 @@ Media::Streams Media::Decoder::GetStream(Media::StreamType mediatype)
 {
 	Media::Streams streams = {};
 	std::shared_ptr<AVStream> stream;
-	for ( unsigned int i = 0; i < (*this->fileFormatCtx)->nb_streams ; i++ )
+	for ( unsigned int i = 0; i < (this->fileFormatCtx)->nb_streams ; i++ )
 	{
-		stream = std::make_shared<AVStream>(*( *this->fileFormatCtx )->streams[i]);
+		stream = std::make_shared<AVStream>(*( this->fileFormatCtx )->streams[i]);
 		if ( stream->codecpar->codec_type == (AVMediaType)mediatype )
 		{
 			streams.push_back(stream);
@@ -145,7 +151,7 @@ Media::Streams Media::Decoder::GetStream(Media::StreamType mediatype)
 	return streams;
 }
 
-Media::StreamInfo Media::Decoder::GetStreamInfo(Media::Stream stream)
+Media::StreamInfo Media::Decoder::GetStreamInfo(Media::Stream& stream)
 {
 	Media::StreamInfo info;
 	AVDictionaryEntry* entry = NULL;
@@ -164,32 +170,35 @@ Media::StreamInfo Media::Decoder::GetStreamInfo(Media::Stream stream)
 	return info;
 }
 
-Media::StreamDecoder Media::Decoder::GetStreamDecoder(Media::Stream stream)
+Media::Error Media::Decoder::SetStreamDecoder(Media::Stream& stream, Media::StreamDecoder& decoder)
 {
-	std::shared_ptr<const AVCodec> streamCodec(avcodec_find_decoder(stream->codecpar->codec_id));
-	tempDecoder = Media::MakeStreamDecoder(avcodec_alloc_context3(streamCodec.get()));
+	std::unique_ptr<const AVCodec> streamCodec(avcodec_find_decoder(stream->codecpar->codec_id));
+	decoder = MakeStreamDecoder(avcodec_alloc_context3(streamCodec.get()));
 	
-	if ( avcodec_parameters_to_context(tempDecoder.get(), stream->codecpar) < 0 )
+	if ( avcodec_parameters_to_context(this->audioDecoder.get(), stream->codecpar) < 0 )
 	{
 		
 	}
 
-	if ( avcodec_open2(tempDecoder.get(), streamCodec.get(), NULL) < 0 )
+	if ( avcodec_open2(this->audioDecoder.get(), streamCodec.get(), NULL) < 0 )
 	{
 		
 	}
 
-	return tempDecoder;
+	av_free((AVCodec*)streamCodec.release());
+
+	return Error::None;
 }
 
-Media::Error Media::Decoder::SetSwrContext(Media::StreamDecoder audioDecoder)
+Media::Error Media::Decoder::SetSwrContext(Media::StreamDecoder& audioDecoder)
 {
-	if ( swr_is_initialized(*this->swrCtx) )
+	 
+	if ( swr_is_initialized(this->swrCtx) )
 	{
-		swr_free(this->swrCtx.get());
+		swr_free(&this->swrCtx);
 	}
 	swr_alloc_set_opts(
-		*this->swrCtx,
+		this->swrCtx,
 		AV_CH_LAYOUT_STEREO,
 		AV_SAMPLE_FMT_S16,
 		this->audioDecoder->sample_rate,
@@ -199,17 +208,17 @@ Media::Error Media::Decoder::SetSwrContext(Media::StreamDecoder audioDecoder)
 		0,
 		nullptr
 	);
-	swr_init(*this->swrCtx);
+	swr_init(this->swrCtx);
 	return Media::Error::None;
 }
 
-Media::Error Media::Decoder::SetSwsContext(Media::StreamDecoder videoDecoder)
+Media::Error Media::Decoder::SetSwsContext(Media::StreamDecoder& videoDecoder)
 {
-	this->swsCtx = sws_getContext(
+	this->swsCtx = MakeSwsCtx(sws_getContext(
 		videoDecoder->width, videoDecoder->height, videoDecoder->pix_fmt,
 		videoDecoder->width, videoDecoder->height, AV_PIX_FMT_RGBA,
 		SWS_BILINEAR, NULL, NULL, NULL
-	);
+	));
 
 	return Media::Error::None;
 }
@@ -217,58 +226,57 @@ Media::Error Media::Decoder::SetSwsContext(Media::StreamDecoder videoDecoder)
 void Media::Decoder::SeekTo(float time)
 {
 	time = time / (float) av_q2d(this->CurrentAudioStream.timebase);
-	av_seek_frame(*this->fileFormatCtx, this->CurrentAudioStream.index, (int64_t)time, AVSEEK_FLAG_BACKWARD);
+	av_seek_frame(this->fileFormatCtx.get(), this->CurrentAudioStream.index, (int64_t)time, AVSEEK_FLAG_ANY);
 }
 
-void Media::Decoder::SetCurrentAudioStream(Media::Stream audioStream)
+void Media::Decoder::SetCurrentAudioStream(Media::Stream& audioStream)
 {
 	this->CurrentAudioStream.index = audioStream->index;
 	this->CurrentAudioStream.timebase = audioStream->time_base;
-	this->audioDecoder = this->GetStreamDecoder(audioStream);
+	this->SetStreamDecoder(audioStream, this->audioDecoder);
 	this->SetSwrContext(this->audioDecoder);
 }
 
-void Media::Decoder::SetCurrentVideoStream(Media::Stream videoStream)
+void Media::Decoder::SetCurrentVideoStream(Media::Stream& videoStream)
 {
 	this->CurrentVideoStream.index = videoStream->index;
 	this->CurrentVideoStream.timebase = videoStream->time_base;
-	this->videoDecoder = this->GetStreamDecoder(videoStream);
+	this->SetStreamDecoder(videoStream, this->videoDecoder);
 	this->SetSwsContext(this->videoDecoder);
 }
 
-Media::DecodingError Media::Decoder::DecodeAudioPacket(Media::Packet audioPacket, Media::AudioFrame audioFrame)
+Media::DecodingError Media::Decoder::DecodeAudioPacket(Media::Packet& audioPacket, Media::AudioFrame& audioFrame)
 {
-	int err = avcodec_send_packet(this->audioDecoder.get(), *audioPacket);
+	avcodec_send_packet(this->audioDecoder.get(), audioPacket.get());
 
-	while ( err > 0 )
+	int err = avcodec_receive_frame(this->audioDecoder.get(), this->latestFrame.get());
+
+	if ( err == AVERROR(EAGAIN) )
 	{
-		err = avcodec_receive_frame(this->audioDecoder.get(), *this->latestFrame);
-
-		if ( err == AVERROR(EAGAIN) )
-		{
-			return Media::DecodingError::InsufficientData;
-		}
-
-		int nb = 0;
-		audioFrame.pts = (float) ( *this->latestFrame )->pts * (float) av_q2d(this->CurrentAudioStream.timebase);
-
-		if ( this->audioDecoder->sample_fmt != AV_SAMPLE_FMT_S16 )
-		{
-			nb = ( *this->latestFrame )->nb_samples * 4;
-			audioFrame.data.resize(nb);
-			uint8_t* buffer = audioFrame.data.data();
-			swr_convert(*this->swrCtx, &buffer, nb, (const uint8_t**) ( *this->latestFrame )->extended_data, ( *this->latestFrame )->nb_samples);
-			audioFrame.buffersize = nb;
-		}
-		else
-		{
-			nb = ( *this->latestFrame )->linesize [0];
-			audioFrame.data = std::vector<uint8_t>(
-				*(( *this->latestFrame )->extended_data), 
-				*(( *this->latestFrame )->extended_data + nb));
-			audioFrame.buffersize = nb;
-		}
+		Media::FrameUnref(this->latestFrame);
+		return Media::DecodingError::InsufficientData;
 	}
+
+	int nb = 0;
+	audioFrame.pts = (float) ( this->latestFrame )->pts * (float) av_q2d(this->CurrentAudioStream.timebase);
+
+	if ( this->audioDecoder->sample_fmt != AV_SAMPLE_FMT_S16 )
+	{
+		nb = ( this->latestFrame )->nb_samples * 4;
+		audioFrame.data.resize(nb);
+		uint8_t* buffer = audioFrame.data.data();
+		swr_convert(this->swrCtx, &buffer, nb, (const uint8_t**) ( this->latestFrame )->extended_data, ( this->latestFrame )->nb_samples);
+		audioFrame.buffersize = nb;
+	}
+	else
+	{
+		nb = ( this->latestFrame )->linesize [0];
+		audioFrame.data = std::vector<uint8_t>(
+			*( this->latestFrame->extended_data ),
+			*( this->latestFrame->extended_data + nb ));
+		audioFrame.buffersize = nb;
+	}
+	Media::FrameUnref(this->latestFrame);
 	return Media::DecodingError::None;
 }
 
@@ -285,12 +293,13 @@ Media::AudioFrame Media::Decoder::GetAudioFrame(float time)
 	bool gotFrame = false;
 	while ( !gotFrame )
 	{
-		err = av_read_frame(*this->fileFormatCtx, *this->latestPacket);
+		err = av_read_frame(this->fileFormatCtx.get(), this->latestPacket.get());
 		if ( err == AVERROR_EOF )
 		{
 			audioFrame.err = Media::Error::FileEnded;
+			gotFrame = true;
 		}
-		else if ( (*this->latestPacket)->stream_index == this->CurrentAudioStream.index)
+		else if ( this->latestPacket->stream_index == this->CurrentAudioStream.index )
 		{
 			derr = this->DecodeAudioPacket(this->latestPacket, audioFrame);
 			if ( derr == Media::DecodingError::None )
@@ -298,7 +307,9 @@ Media::AudioFrame Media::Decoder::GetAudioFrame(float time)
 				gotFrame = true;
 			}
 		}
-	} 
+
+		Media::FrameUnref(this->latestFrame);
+		Media::PacketUnref(this->latestPacket);
+	}
 	return audioFrame;
 }
-

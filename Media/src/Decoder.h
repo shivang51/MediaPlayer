@@ -6,8 +6,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "FFmpeg.h"
 
+#include "FFmpeg.h"
 #include "Types.h"
 
 namespace Media
@@ -64,7 +64,7 @@ namespace Media
         * @param stream: Media stream to extract information
         * @returns Object with language and title of stream
         **/
-        Media::StreamInfo GetStreamInfo(Media::Stream stream);
+        Media::StreamInfo GetStreamInfo(Media::Stream& stream);
 
         /**
         * Seeks to some time in current open file
@@ -72,8 +72,8 @@ namespace Media
         **/
         void SeekTo(float time);
 
-        void SetCurrentAudioStream(Media::Stream stream);
-        void SetCurrentVideoStream(Media::Stream stream);
+        void SetCurrentAudioStream(Media::Stream& stream);
+        void SetCurrentVideoStream(Media::Stream& stream);
 
         /**
         * Gets the current frame from current media stream given time
@@ -84,17 +84,16 @@ namespace Media
 
     private:
         std::shared_ptr<AVDictionary*> mediaOptions = std::make_shared<AVDictionary*>();
-        std::shared_ptr<AVFormatContext*> fileFormatCtx = std::make_shared<AVFormatContext*>();
+        std::unique_ptr<AVFormatContext> fileFormatCtx = std::make_unique<AVFormatContext>();
 
-        Media::Packet latestPacket = std::make_shared<AVPacket*>();
-        Media::Frame latestFrame = std::make_shared<AVFrame*>();
+        Media::Packet latestPacket = std::make_unique<AVPacket>();
+        Media::Frame latestFrame = std::make_unique<AVFrame>();
 
-        Media::StreamDecoder tempDecoder = std::make_shared<AVCodecContext>();
-        Media::StreamDecoder audioDecoder = std::make_shared<AVCodecContext>();
-        Media::StreamDecoder videoDecoder = std::make_shared<AVCodecContext>();
+        Media::StreamDecoder audioDecoder = std::make_unique<AVCodecContext>();
+        Media::StreamDecoder videoDecoder = std::make_unique<AVCodecContext>();
 
-        Media::SwrCtx swrCtx = std::make_shared<SwrContext*>();
-        SwsContext* swsCtx = nullptr;
+        Media::SwrCtx swrCtx = nullptr;
+        Media::SwsCtx swsCtx = nullptr;
 
         File openedfile = {};
         bool terminated = false;
@@ -102,14 +101,16 @@ namespace Media
         Media::CurrentStream CurrentAudioStream = Media::CurrentStream();
         Media::CurrentStream CurrentVideoStream = Media::CurrentStream();
 
+        float currentTime = 0.0f;
+
     private:
-        Media::StreamType GetStreamType(Media::Stream stream);
-        Media::StreamDecoder GetStreamDecoder(Media::Stream stream);
+        Media::StreamType GetStreamType(Media::Stream& stream);
 
-        Media::Error SetSwrContext(Media::StreamDecoder audioDecoder);
-        Media::Error SetSwsContext(Media::StreamDecoder videoDecoder);
+        Media::Error SetStreamDecoder(Media::Stream& stream, Media::StreamDecoder& decoder);
+        Media::Error SetSwrContext(Media::StreamDecoder& audioDecoder);
+        Media::Error SetSwsContext(Media::StreamDecoder& videoDecoder);
 
-        Media::DecodingError DecodeAudioPacket(Media::Packet audioPacket, Media::AudioFrame audioFrame);
+        Media::DecodingError DecodeAudioPacket(Media::Packet& audioPacket, Media::AudioFrame& audioFrame);
 
     };
 }
