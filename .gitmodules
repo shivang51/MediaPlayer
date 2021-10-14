@@ -1,3 +1,6 @@
 [submodule "vendors/ffmpeg"]
 	path = vendors/ffmpeg
 	url = https://github.com/shivang51/ffmpeg
+[submodule "vendors/portaudio"]
+	path = vendors/portaudio
+	url = https://github.com/shivang51/portaudio
