@@ -313,3 +313,8 @@ Media::AudioFrame Media::Decoder::GetAudioFrame(float time)
 	}
 	return audioFrame;
 }
+
+uint8_t Media::Decoder::GetSampleRate()
+{
+	return (uint8_t)this->audioDecoder->sample_rate;
+}

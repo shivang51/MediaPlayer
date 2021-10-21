@@ -82,6 +82,8 @@ namespace Media
         **/
         AudioFrame GetAudioFrame(float time = -1.0f);
 
+        uint8_t GetSampleRate();
+
     private:
         std::shared_ptr<AVDictionary*> mediaOptions = std::make_shared<AVDictionary*>();
         std::unique_ptr<AVFormatContext> fileFormatCtx = std::make_unique<AVFormatContext>();
