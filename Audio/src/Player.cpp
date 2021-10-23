@@ -55,7 +55,7 @@ int Player::Audio::StreamCallback(const void* input, void* output,
 	PaStreamCallbackFlags statusFlags,
 	void* userData)
 {
-	
+	return 0;
 }
 
 void Player::Audio::SetSampleRate(uint8_t sampleRate)

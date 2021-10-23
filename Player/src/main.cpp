@@ -1,24 +1,33 @@
 #include <iostream>
 
-#include "Media.h"
+#include "Widgets.h"
+
+class MyWindow : public Widgets::Window
+{
+public:
+
+	MyWindow() {};
+	
+	void OnUpdate()
+	{
+		Window::OnUpdate();
+
+		this->UpdateSubWidgets();
+		this->Swapbuffers();
+	}
+};
 
 int main()
 {
+	MyWindow window;
+	window.Create("Media Player", 800, 600);
+	window.SetBackgroundColor({0.45f, 0.40f, 0.60f, 1.0f });
 
-	Media::File file;
-	file.location = "F:\\Movies\\4_5875089835827398390.mkv";
-	//file.location = "F:\\Movies\\4_5875089835827398378.mp4";
 
-	Media::Decoder decoder;
-	decoder.OpenFile(&file);
-	{
-		Media::Streams audios = decoder.GetStream(Media::StreamType::Audio);
-	}
-	//Media::StreamInfo info = decoder.GetStreamInfo(audios[0]);
 
-	/*decoder.SetCurrentAudioStream(audios [0]);
-	Media::AudioFrame frame = decoder.GetAudioFrame(50);
-	frame = decoder.GetAudioFrame(5);*/
-	std::cout << "h" << std::endl;
+	Application app;
+	app.SetMainWindow(&window);
+
+	app.Run();
 	return 0;
 }

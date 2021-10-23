@@ -131,7 +131,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Media;$(SolutionDir)Audio;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\C++\_vendors\glew\include;D:\C++\_vendors\glfw\include;$(SolutionDir)Media;$(SolutionDir)Audio;$(SolutionDir)Widgets;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -149,7 +149,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)Media;$(SolutionDir)Audio;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\C++\_vendors\glew\include;D:\C++\_vendors\glfw\include;$(SolutionDir)Media;$(SolutionDir)Audio;$(SolutionDir)Widgets;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -162,6 +162,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Audio\Audio.vcxproj">
+      <Project>{d87d2d37-bb08-4494-90cd-53de83af95eb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Media\Media.vcxproj">
+      <Project>{ac1bf614-12b8-4c16-8187-3842c07a8851}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Widgets\Widgets.vcxproj">
+      <Project>{cc37a24a-0574-4709-b7fd-1c687d90ef69}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
