@@ -7,3 +7,6 @@
 [submodule "vendors/glm"]
 	path = vendors/glm
 	url = https://github.com/shivang51/glm
+[submodule "vendors/glad"]
+	path = vendors/glad
+	url = https://github.com/shivang51/glad
