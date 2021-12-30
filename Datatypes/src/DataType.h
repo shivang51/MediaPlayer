@@ -1,17 +1,9 @@
 #pragma once
-
-#include "FFmpeg.h"
-#include <memory>
-#include <string>
 #include <vector>
+#include <string>
+#include <memory>
+#include "../../vendors/ffmpeg.h"
 
-/**
-* Contains all the type definations, structs and error definations
-**/
-
-#ifndef MEDIA_TYPES
-#define MEDIA_TYPES
-//--------------- Enums ----------------------
 namespace Media
 {
     enum class Error
@@ -37,25 +29,22 @@ namespace Media
     };
 }
 
-//--------------- Type Definations -----------
-namespace Media
+
+namespace DataType
 {
+
+    typedef AVRational TimeBase;
+
     typedef std::shared_ptr<AVStream> Stream;
+
     typedef std::vector<Stream> Streams;
 
     typedef std::unique_ptr<AVCodecContext> StreamDecoder;
 
     typedef std::unique_ptr<AVPacket> Packet;
+
     typedef std::unique_ptr<AVFrame> Frame;
 
-    typedef SwrContext* SwrCtx;
-    typedef SwsContext* SwsCtx;
-
-    typedef AVRational TimeBase;
-}
-
-//------------- Structs ----------------------
-namespace Media{
     struct File
     {
         std::string location = "";
@@ -90,19 +79,7 @@ namespace Media{
     struct CurrentStream
     {
         int index = -1;
-        Media::TimeBase timebase = Media::TimeBase();
+        TimeBase timebase = TimeBase();
     };
 }
 
-
-
-//----------------- Type Creation -------------
-namespace Media
-{
-    StreamDecoder MakeStreamDecoder(AVCodecContext* dec);
-    SwsCtx MakeSwsCtx(SwsContext* ctx);
-    void FrameUnref(const Frame& frame);
-    void PacketUnref(const Packet& frame);
-}
-
-#endif

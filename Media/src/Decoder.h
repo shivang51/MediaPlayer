@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "FFmpeg.h"
-#include "Types.h"
+#include "../../vendors/ffmpeg.h"
+#include "DataTypes.h"
 
 namespace Media
 {
@@ -29,14 +29,14 @@ namespace Media
         * @param file: Object of type File which should have location of file to be opened.
         * @return Decoder::Error::None on success or returns a valid Error 
         **/
-        Media::Error OpenFile(Media::File* file);
+        Error OpenFile(DataType::File* file);
 
         /**
         * Closes a file during decoding.
         * @param file: Object of type File which should have location of file to be closed.
         * @return Decoder::Error::None on success or returns a valid Error
         **/
-        void CloseFile(Media::File* file = nullptr);
+        void CloseFile(DataType::File* file = nullptr);
 
     public:
         /**
@@ -57,14 +57,14 @@ namespace Media
         * @param streamType: Type of streams
         * @returns A vector object with AVStreams as unique_ptr
         **/
-        Media::Streams GetStream(Media::StreamType streamtype);
+        DataType::Streams GetStream(StreamType streamtype);
 
         /**
         * Gets the information of stream i.e. lanugage and title
         * @param stream: Media stream to extract information
         * @returns Object with language and title of stream
         **/
-        Media::StreamInfo GetStreamInfo(Media::Stream& stream);
+        DataType::StreamInfo GetStreamInfo(DataType::Stream& stream);
 
         /**
         * Seeks to some time in current open file
@@ -72,15 +72,15 @@ namespace Media
         **/
         void SeekTo(float time);
 
-        void SetCurrentAudioStream(Media::Stream& stream);
-        void SetCurrentVideoStream(Media::Stream& stream);
+        void SetCurrentAudioStream(DataType::Stream& stream);
+        void SetCurrentVideoStream(DataType::Stream& stream);
 
         /**
         * Gets the current frame from current media stream given time
         * @param time: time in seconds
         * @returns An audio frame
         **/
-        AudioFrame GetAudioFrame(float time = -1.0f);
+        DataType::AudioFrame GetAudioFrame(float time = -1.0f);
 
         uint8_t GetSampleRate();
 
@@ -88,31 +88,33 @@ namespace Media
         std::shared_ptr<AVDictionary*> mediaOptions = std::make_shared<AVDictionary*>();
         std::unique_ptr<AVFormatContext> fileFormatCtx = std::make_unique<AVFormatContext>();
 
-        Media::Packet latestPacket = std::make_unique<AVPacket>();
-        Media::Frame latestFrame = std::make_unique<AVFrame>();
+        DataType::Packet latestPacket = std::make_unique<AVPacket>();
+        DataType::Frame latestFrame = std::make_unique<AVFrame>();
 
-        Media::StreamDecoder audioDecoder = std::make_unique<AVCodecContext>();
-        Media::StreamDecoder videoDecoder = std::make_unique<AVCodecContext>();
+        DataType::StreamDecoder audioDecoder = std::make_unique<AVCodecContext>();
+        DataType::StreamDecoder videoDecoder = std::make_unique<AVCodecContext>();
 
-        Media::SwrCtx swrCtx = nullptr;
-        Media::SwsCtx swsCtx = nullptr;
+        SwrContext* swrCtx = nullptr;
+        SwsContext* swsCtx = nullptr;
 
-        File openedfile = {};
+        DataType::File openedfile = {};
         bool terminated = false;
 
-        Media::CurrentStream CurrentAudioStream = Media::CurrentStream();
-        Media::CurrentStream CurrentVideoStream = Media::CurrentStream();
+        DataType::CurrentStream CurrentAudioStream = DataType::CurrentStream();
+        DataType::CurrentStream CurrentVideoStream = DataType::CurrentStream();
 
         float currentTime = 0.0f;
 
     private:
-        Media::StreamType GetStreamType(Media::Stream& stream);
+        StreamType GetStreamType(DataType::Stream& stream);
 
-        Media::Error SetStreamDecoder(Media::Stream& stream, Media::StreamDecoder& decoder);
-        Media::Error SetSwrContext(Media::StreamDecoder& audioDecoder);
-        Media::Error SetSwsContext(Media::StreamDecoder& videoDecoder);
+        Error SetStreamDecoder(DataType::Stream& stream, DataType::StreamDecoder& decoder);
+        Error SetSwrContext(DataType::StreamDecoder& audioDecoder);
+        Error SetSwsContext(DataType::StreamDecoder& videoDecoder);
+        void FrameUnref(const DataType::Frame& frame);
+        void PacketUnref(const DataType::Packet& packet);
 
-        Media::DecodingError DecodeAudioPacket(Media::Packet& audioPacket, Media::AudioFrame& audioFrame);
+        DecodingError DecodeAudioPacket(DataType::Packet& audioPacket, DataType::AudioFrame& audioFrame);
 
     };
 }

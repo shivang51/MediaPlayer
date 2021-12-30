@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include "../../Datatypes/Datatypes.h"
 
 namespace Player
 {
@@ -9,10 +9,5 @@ namespace Player
         FailedToInit = 0,
         None,
         AreadyInitialized
-    };
-
-    struct Frame
-    {
-        std::vector<uint8_t> data = { };
     };
 }

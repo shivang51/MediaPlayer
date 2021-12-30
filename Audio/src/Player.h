@@ -1,11 +1,12 @@
 #pragma once
 
-#include "portaudio.h"
-
-#include "Types.h"
+#include "../../vendors/portaudio.h"
+#include "DataType.h"
+#include <cstdint>
 
 namespace Player
 {
+
     class Audio
     {
     public:
@@ -17,12 +18,21 @@ namespace Player
 
         void SetSampleRate(uint8_t sampleRate = 44100);
 
+        struct UserData
+        {
+            size_t BufferSize;
+        };
+
+        void Play(DataType::AudioFrame* frame);
+        void Stop();
+
     private:
         PaError err = NULL;
         bool intialized = false;
 
         PaStreamParameters outputParameters = PaStreamParameters();
         PaStream* stream = nullptr;
+        UserData* userData = nullptr;
 
         uint8_t sampleRate = 44100;
         static int StreamCallback(const void* input, void* output,

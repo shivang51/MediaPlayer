@@ -2,15 +2,6 @@
 
 Player::Audio::Audio()
 {
-	outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
-	if ( outputParameters.device == paNoDevice )
-	{
-		throw "No Output Device Found";
-	}
-	outputParameters.channelCount = 2;       /* stereo output */
-	outputParameters.sampleFormat = paUInt8; /* 8 bit unsigned int */
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-	outputParameters.hostApiSpecificStreamInfo = NULL;
 }
 
 Player::Audio::~Audio()
@@ -26,9 +17,19 @@ Player::AudioError Player::Audio::Init()
 	}
 	else if ( Pa_Initialize() != paNoError )
 	{
-		this->intialized = true;
 		return AudioError::FailedToInit;
 	}
+	this->intialized = true;
+	
+	outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+	if ( outputParameters.device == paNoDevice )
+	{
+		throw "No Output Device Found";
+	}
+	outputParameters.channelCount = 2;       /* stereo output */
+	outputParameters.sampleFormat = paUInt8; /* 8 bit unsigned int */
+	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
+	outputParameters.hostApiSpecificStreamInfo = NULL;
 
 	err = Pa_OpenStream(
 		&stream,
@@ -55,10 +56,22 @@ int Player::Audio::StreamCallback(const void* input, void* output,
 	PaStreamCallbackFlags statusFlags,
 	void* userData)
 {
+	uint8_t* in = (uint8_t*) input;
+	uint8_t* out = (uint8_t*) output;
+	auto data = (UserData*) userData;
+
 	return 0;
 }
 
 void Player::Audio::SetSampleRate(uint8_t sampleRate)
 {
 	this->sampleRate = sampleRate;
+}
+
+void Player::Audio::Play(DataType::AudioFrame* frame)
+{
+}
+
+void Player::Audio::Stop()
+{
 }
