@@ -1,12 +1,6 @@
-[submodule "vendors/ffmpeg"]
-	path = vendors/ffmpeg
-	url = https://github.com/shivang51/ffmpeg
 [submodule "vendors/portaudio"]
 	path = vendors/portaudio
 	url = https://github.com/shivang51/portaudio
-[submodule "vendors/glm"]
-	path = vendors/glm
-	url = https://github.com/shivang51/glm
 [submodule "vendors/glad"]
 	path = vendors/glad
 	url = https://github.com/shivang51/glad
@@ -15,4 +9,13 @@
 	url = https://github.com/shivang51/Glfw-Libraries.git
 [submodule "vendors\\imgui"]
 	path = vendors\\imgui
+	url = https://github.com/shivang51/imgui
+[submodule "vendors/ffmpeg"]
+	path = vendors/ffmpeg
+	url = https://github.com/shivang51/ffmpeg
+[submodule "vendors/glm"]
+	path = vendors/glm
+	url = https://github.com/shivang51/glm
+[submodule "vendors/imgui"]
+	path = vendors/imgui
 	url = https://github.com/shivang51/imgui
