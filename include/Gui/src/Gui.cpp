@@ -65,9 +65,12 @@ void Gui::set_player(Player::Player* player)
 
     auto time_change_fp = std::bind(&Gui::OnTimeChange, this, std::placeholders::_1, std::placeholders::_2);
     this->player->set_on_time_change(time_change_fp);
-    
-    auto play_start_fp = std::bind(&Gui::OnPlayStarts, this);
-    this->player->set_on_play_start(play_start_fp);
+
+    auto void_fp = std::bind(&Gui::OnPlayStarts, this);
+    this->player->set_on_play_starts(void_fp);
+
+    void_fp = std::bind(&Gui::OnPlayStops, this);
+    this->player->set_on_play_stops(void_fp);
 }
 
 void Gui::m_icon_button(const char* icon, ButtonClickCallback callback)
@@ -292,4 +295,13 @@ void Gui::OnPlayStarts()
 {
     this->set_duration(this->player->get_duration());
     this->set_is_playing(true);
+    this->paused = false;
+}
+
+void Gui::OnPlayStops()
+{
+    this->set_duration(0.0f);
+    this->set_is_playing(false);
+    this->current_time = 0.0f;
+    this->progress = 0.0f;
 }

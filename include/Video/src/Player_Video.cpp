@@ -31,7 +31,6 @@ namespace Player
                 frame->yuv_size [i], heights [i],   // width, height
                 GL_RED, GL_UNSIGNED_BYTE,           // version of pixel data, type of data
                 frame->data.at(i).data());          // pointer to data
-            
         }
     }
 

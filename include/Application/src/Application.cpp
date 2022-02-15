@@ -32,7 +32,7 @@ Application::Application()
 
     glfwMakeContextCurrent(this->main_window);
     glfwSetWindowUserPointer(this->main_window, this);
-    glfwSwapInterval(true);
+    //glfwSwapInterval(true);
 
 
     this->player = new Player::Player();
@@ -61,7 +61,6 @@ Application::~Application()
         glfwTerminate();
     }
 }
-
 
 void Application::render_func()
 {
@@ -149,7 +148,7 @@ void Application::swap_buffers()
 
 void Application::update()
 {
-    //glfwMakeContextCurrent(this->main_window);
+    glfwMakeContextCurrent(this->main_window);
     glViewport(texturePos [0], texturePos [1], texturePos [2], texturePos [3]);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);

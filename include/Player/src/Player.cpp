@@ -86,7 +86,7 @@ namespace Player
         this->video->init({(size_t)frame.yuv_size[0], (size_t) frame.height });
         
         //Setting audio samplerate
-        this->audio->init_device(decoder->GetSampleRate());
+        this->audio->init_device();
 
         if (cb_on_file_load)
         {
@@ -108,8 +108,11 @@ namespace Player
     {
         if (!this->playing)
         {
+            frames = decoder->GetNFrames(cache_time);
             this->playing = true;
+            this->paused = false;
             this->first_frame = true;
+
             if (cb_on_play_start)
             {
                 cb_on_play_start();
@@ -122,11 +125,10 @@ namespace Player
 
     void Player::decoding_()
     {
-        frames = decoder->GetNFrames(5.0f);
-        float time_gap = 0;
+        float time_gap = 0.0f;
         while (this->playing)
         {
-            while (frames.size() < 2 || time_gap < 5.0f)
+            while (frames.size() < 2 || time_gap < cache_time)
             {
                 frames.push_back(decoder->GetNextFrame());
                 if (frames.size() > 2)
@@ -154,7 +156,7 @@ namespace Player
 
     void Player::update_frame()
     {
-        if (frames.size() > 0 && this->current_time < this->duration && !this->paused)
+        if (frames.size() > 0 && this->current_time < this->duration && !this->paused && this->playing)
         {
             frame = frames.at(0);
             
@@ -168,11 +170,6 @@ namespace Player
 
             if (frame.pts <= diff.count())
             {
-                this->current_time = frame.pts;
-                if (this->cb_on_time_change)
-                {
-                    cb_on_time_change(this->current_time, this->duration);
-                }
                 if (frame.type == Media::FrameType::Video)
                 {
                     this->video->update_data(&frame.videoFrame);
@@ -182,6 +179,13 @@ namespace Player
                 {
                     audio->play(&frame.audioFrame);
                 }
+
+                this->current_time = frame.pts;
+                if (this->cb_on_time_change)
+                {
+                    cb_on_time_change(this->current_time, this->duration);
+                }
+
                 frames.erase(frames.begin());
             }
         }
@@ -212,6 +216,8 @@ namespace Player
             this->decoding_thread.join();
         if (this->audio)
         this->audio->close_device();
+        if(this->cb_on_play_stop)
+        cb_on_play_stop();
     }
 
     bool Player::is_playing()
@@ -234,13 +240,18 @@ namespace Player
         this->cb_on_toggle_play = callback;
     }
     
-    void Player::set_on_file_load(FileLoadCallback callback)
+    void Player::set_on_file_load(VoidCallback callback)
     {
         this->cb_on_file_load = callback;
     }
 
-    void Player::set_on_play_start(PlayStartCallback callback)
+    void Player::set_on_play_starts(VoidCallback callback)
     {
         this->cb_on_play_start = callback;
+    }
+
+    void Player::set_on_play_stops(VoidCallback callback)
+    {
+        this->cb_on_play_stop = callback;
     }
 }

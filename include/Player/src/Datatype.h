@@ -15,8 +15,7 @@ namespace Player
 
 	typedef std::function<void(float, float)> TimeChangeCallBack;
 	typedef std::function<void(bool)> TogglePlayCallBack;
-	typedef std::function<void()> FileLoadCallback;
-	typedef std::function<void()> PlayStartCallback;
+	typedef std::function<void()> VoidCallback;
 
 	typedef DataType::MediaFrame Frame;
 

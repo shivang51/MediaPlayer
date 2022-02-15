@@ -92,6 +92,7 @@ private:
     // Player class callbacks
     void OnTimeChange(float current_time, float duration);
     void OnPlayStarts();
+    void OnPlayStops();
 
 };
 
